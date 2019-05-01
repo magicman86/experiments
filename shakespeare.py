@@ -105,7 +105,8 @@ def draw():
     global DESIRED, generations
     most_fit = population[fittest_index]
     most_fit_score = fitness_pool[fittest_index]
-    bext.goto(0, 0)
+    bext.clear()
+    # bext.goto(0, 0)
     generations = generations + 1
     print("most fit: " + "".join(most_fit))
     print("generations: " + str(generations))

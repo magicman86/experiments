@@ -2,14 +2,15 @@ import bext
 import time, random, sys
 
 GENERATIONS = 3
-PAUSE = .25
+PAUSE = 0.25
 current_things = {}
 next_things = {}
 
 WIDTH, HEIGHT = bext.size()
 WIDTH = WIDTH - 1
 HEIGHT = HEIGHT - 1
-HEIGHT = (HEIGHT - 1) * 2 # Leave a row free for "Press Ctrl-C..." message.
+HEIGHT = (HEIGHT - 1) * 2 - 1
+# Leave a row free for "Press Ctrl-C..." message.
 
 bext.clear()
 for x in range(WIDTH):
@@ -53,7 +54,7 @@ def update():
 
 
 def draw(step):
-    bext.fg('black')
+    # bext.fg('black')
     for x in range(WIDTH):
         for y in range(HEIGHT):
             if current_things.get((x, y), False):
