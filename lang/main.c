@@ -209,7 +209,7 @@ typedef struct Token{
     const char *start;
     const char *end;
     union {
-        int intval;
+        uint64_t intval;
         double floatval;
         char *name;
         char *strval;
@@ -264,9 +264,6 @@ void scan_int(void) {
             base = 2;
             stream++;
             token.modifier = TOKENMOD_BIN;
-        } else {
-            syntax_error("Invalid integer literal suffix '%c'", *stream);
-            stream++;
         }
     }
     uint64_t val = 0;
@@ -537,8 +534,11 @@ void lex_test(void)
     init_stream("1e3 1.0e3 0xff 011 0b1010 0.23");
     assert_token_float(1e3);
     assert_token_float(1.0e3);
+    assert(token.modifier == TOKENMOD_HEX);
     assert_token_int(0xff);
+    assert(token.modifier == TOKENMOD_OCT);
     assert_token_int(011);
+    assert(token.modifier == TOKENMOD_BIN);
     assert_token_int(0xa);
     assert_token_float(0.23);
     assert_token_eof();

@@ -3,4 +3,4 @@ project(DaveLang C)
 
 set(CMAKE_C_STANDARD 99)
 
-add_executable(DaveLang library.c)
+add_executable(DaveLang main.c)
