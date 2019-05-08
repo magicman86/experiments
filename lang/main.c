@@ -158,6 +158,27 @@ typedef enum TokenKind {
     TOKEN_FLOAT,
     TOKEN_NAME,
     TOKEN_STR,
+    TOKEN_LSHIFT,
+    TOKEN_RSHIFT,
+    TOKEN_EQ,
+    TOKEN_NOTEQ,
+    TOKEN_LTEQ,
+    TOKEN_GTEQ,
+    TOKEN_AND,
+    TOKEN_OR,
+    TOKEN_INC,
+    TOKEN_DEC,
+    TOKEN_COLON_ASSIGN,
+    TOKEN_ADD_ASSIGN,
+    TOKEN_SUB_ASSIGN,
+    TOKEN_OR_ASSIGN,
+    TOKEN_AND_ASSIGN,
+    TOKEN_XOR_ASSIGN,
+    TOKEN_LSHIFT_ASSIGN,
+    TOKEN_RSHIFT_ASSIGN,
+    TOKEN_MUL_ASSIGN,
+    TOKEN_DIV_ASSIGN,
+    TOKEN_MOD_ASSIGN,
 } TokenKind;
 
 typedef enum TokenModifier {
@@ -184,6 +205,8 @@ size_t copy_token_kind_str(char *dest, size_t dest_size, TokenKind kind) {
         case TOKEN_FLOAT:
             n = snprintf(dest, dest_size, "float");
             break;
+        case TOKEN_STR:
+            n = snprintf(dest, dest_size, "string");
         default:
             if(kind < 128 && isprint(kind)) {
                 n = snprintf(dest, dest_size, "%c", kind);
@@ -397,6 +420,27 @@ void scan_str() {
     token.strval = str;
 }
 
+#define CASE1(c, c1, k1) \
+        case c: \
+            token.kind = *stream++; \
+            if (*stream == c1) { \
+                token.kind = k1; \
+                ++stream; \
+            }\
+            break;
+
+#define CASE2(c, c1, k1, c2, k2) \
+        case c:\
+            token.kind = *stream++; \
+            if (*stream == c1) { \
+                token.kind = k1; \
+                ++stream; \
+            } else if (*stream == c2) { \
+                token.kind = k2; \
+                ++stream; \
+            } \
+            break;
+
 void next_token(void) {
     bool whitespace = true;
     while (whitespace) {
@@ -451,6 +495,46 @@ void next_token(void) {
             token.kind = TOKEN_NAME;
         }
             break;
+        case '<':
+            token.kind = *stream++;
+            if (*stream == '<') {
+                token.kind = TOKEN_LSHIFT;
+                stream++;
+                if (*stream == '=') {
+                    token.kind = TOKEN_LSHIFT_ASSIGN;
+                    stream++;
+                }
+            } else if (*stream == '=') {
+                token.kind = TOKEN_LTEQ;
+                stream++;
+            }
+            break;
+        case '>':
+            token.kind = *stream++;
+            if (*stream == '>') {
+                token.kind = TOKEN_RSHIFT;
+                stream++;
+                if (*stream == '=') {
+                    token.kind = TOKEN_RSHIFT_ASSIGN;
+                    stream++;
+                }
+            } else if (*stream == '=') {
+                token.kind = TOKEN_GTEQ;
+                stream++;
+            }
+            break;
+        CASE1 (':', '=', TOKEN_COLON_ASSIGN)
+        CASE1 ('*', '=', TOKEN_MUL_ASSIGN)
+        CASE1 ('/', '=', TOKEN_DIV_ASSIGN)
+        CASE1 ('%', '=', TOKEN_MOD_ASSIGN)
+        CASE1 ('^', '=', TOKEN_XOR_ASSIGN)
+        CASE1 ('=', '=', TOKEN_EQ)
+        CASE1 ('!', '=', TOKEN_NOTEQ)
+        CASE2('+', '+', TOKEN_INC, '=', TOKEN_ADD_ASSIGN)
+        CASE2('-', '-', TOKEN_DEC, '=', TOKEN_SUB_ASSIGN)
+        CASE2('&', '&', TOKEN_AND, '=', TOKEN_AND_ASSIGN)
+        CASE2('|', '|', TOKEN_OR, '=', TOKEN_OR_ASSIGN)
+
         default:
             token.kind = *stream++;
             break;
@@ -462,26 +546,6 @@ void init_stream(const char *str) {
     stream = str;
     next_token();
 }
-
-//void print_token(Token tok)
-//{
-//    switch (tok.kind) {
-//        case TOKEN_INT:
-//            printf("TOKEN INT: %d\n", tok.intval);
-//            break;
-//        case TOKEN_FLOAT:
-//            printf("TOKEN FLOAT: %f\n", tok.floatval);
-//            break;
-//        case TOKEN_NAME: {
-//            int length = (int) (tok.end - tok.start);
-//            printf("TOKEN NAME: %.*s ", length, tok.start);
-//            printf("len: %d \n", length);
-//        }
-//            break;
-//        default:
-//            printf("TOKEN '%c'\n", tok.kind);
-//    }
-//}
 
 bool is_token(TokenKind kind) {
     return token.kind == kind;
@@ -521,6 +585,54 @@ bool expect_token(TokenKind kind) {
 #pragma ide diagnostic ignored "bugprone-assert-side-effect"
 void lex_test(void)
 {
+    // Operator Tests
+    init_stream(": := + += ++ - -- -=");
+    assert_token(':');
+    assert_token(TOKEN_COLON_ASSIGN);
+    assert_token('+');
+    assert_token(TOKEN_ADD_ASSIGN);
+    assert_token(TOKEN_INC);
+    assert_token('-');
+    assert_token(TOKEN_DEC);
+    assert_token(TOKEN_SUB_ASSIGN);
+    assert_token_eof();
+
+    init_stream("< <= << <<= > >= >> >>=");
+    assert_token('<');
+    assert_token(TOKEN_LTEQ);
+    assert_token(TOKEN_LSHIFT);
+    assert_token(TOKEN_LSHIFT_ASSIGN);
+    assert_token('>');
+    assert_token(TOKEN_GTEQ);
+    assert_token(TOKEN_RSHIFT);
+    assert_token(TOKEN_RSHIFT_ASSIGN);
+    assert_token_eof();
+
+    init_stream("* *= / /= % %= ^ ^=");
+    assert_token('*');
+    assert_token(TOKEN_MUL_ASSIGN);
+    assert_token('/');
+    assert_token(TOKEN_DIV_ASSIGN);
+    assert_token('%');
+    assert_token(TOKEN_MOD_ASSIGN);
+    assert_token('^');
+    assert_token(TOKEN_XOR_ASSIGN);
+    assert_token_eof();
+
+    init_stream("& && &= | || |= = == ! !=");
+    assert_token('&');
+    assert_token(TOKEN_AND);
+    assert_token(TOKEN_AND_ASSIGN);
+    assert_token('|');
+    assert_token(TOKEN_OR);
+    assert_token(TOKEN_OR_ASSIGN);
+    assert_token('=');
+    assert_token(TOKEN_EQ);
+    assert_token('!');
+    assert_token(TOKEN_NOTEQ);
+    assert_token_eof();
+
+    // String literals tests
     init_stream("\"\\n\" \"woo9\"");
     assert_token_str("\n");
     assert_token_str("woo9");
@@ -531,6 +643,7 @@ void lex_test(void)
     assert_token_char('a');
     assert_token_eof();
 
+    // Integer and float tests
     init_stream("1e3 1.0e3 0xff 011 0b1010 0.23");
     assert_token_float(1e3);
     assert_token_float(1.0e3);
@@ -543,6 +656,7 @@ void lex_test(void)
     assert_token_float(0.23);
     assert_token_eof();
 
+    // Misc tests
     init_stream("a*+987(_wer&tfd*wer");
     assert_token_name("a");
     assert_token('*');
