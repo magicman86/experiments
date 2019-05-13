@@ -1,12 +1,6 @@
-//
-// Created by David Clements on 2019-05-11.
-//
-
-//lexing: translating char stream to token stream
-// 1234 (x+y) => '1234' '(' 'x' '+' 'y' ')'
 typedef enum TokenKind {
     TOKEN_EOF = 0,
-    TOKEN_LAST_CHAR = 127,
+    TOKEN_LAST_CHAR = 127, // reserve tokens
     TOKEN_INT,
     TOKEN_FLOAT,
     TOKEN_NAME,
@@ -39,7 +33,6 @@ typedef enum TokenModifier {
     TOKENMOD_HEX,
     TOKENMOD_BIN,
     TOKENMOD_OCT,
-    TOKENMOD_DEC,
     TOKENMOD_CHAR,
 } TokenMod;
 
@@ -58,13 +51,10 @@ size_t copy_token_kind_str(char *dest, size_t dest_size, TokenKind kind) {
         case TOKEN_FLOAT:
             n = snprintf(dest, dest_size, "float");
             break;
-        case TOKEN_STR:
-            n = snprintf(dest, dest_size, "string");
         default:
             if(kind < 128 && isprint(kind)) {
                 n = snprintf(dest, dest_size, "%c", kind);
-            }
-            else {
+            } else {
                 n = snprintf(dest, dest_size, "<ASCII %d>", kind);
             }
             break;
@@ -95,16 +85,6 @@ typedef struct Token{
 Token token;
 const char *stream;
 
-//const char *keyword_if;
-//const char *keyword_for;
-//const char *keyword_while;
-//
-//void init_keywords() {
-//    keyword_if = str_intern("if");
-//    keyword_for = str_intern("for");
-//    keyword_while = str_intern("while");
-//}
-
 uint8_t char_to_digit[256] = {
         ['0'] = 0,
         ['1'] = 1,
@@ -128,7 +108,6 @@ void scan_int(void) {
     uint64_t base = 10;
     if (*stream == '0') {
         stream++;
-        token.modifier = TOKENMOD_DEC;
         if (tolower(*stream) == 'x') { //hex
             base = 16;
             stream++;
@@ -151,16 +130,15 @@ void scan_int(void) {
         if (digit >= base) {
             syntax_error("Digit '%c' out of range for base %llu", *stream, base);
         }
-        if (val > (UINT64_MAX - digit)/10) {
+        if (val > (UINT64_MAX - digit)/base) {
             syntax_error("Integer literal overflow");
-            val = 0;
             while (isdigit(*stream)) {
                 ++stream;
             }
-            --stream;
-        } else {
-            val = val*base + digit;
+            val = 0;
+            break;
         }
+        val = val*base + digit;
         ++stream;
     }
     token.intval = val;
@@ -180,7 +158,9 @@ void scan_float(void) {
     }
     if (tolower(*stream) == 'e') {
         ++stream;
-        if (*stream == '+' || *stream == '-') { ++stream; }
+        if (*stream == '+' || *stream == '-') {
+            ++stream;
+        }
         if (!isdigit(*stream)) {
             syntax_error("Expected digit after float literal exponent, found '%c'", stream);
         }
@@ -210,7 +190,6 @@ char escape_to_char[256] = {
 void scan_char() {
     assert(*stream == '\'');
     ++stream;
-
     char val = 0;
     if (*stream == '\'') {
         syntax_error("Char literal cannot be empty");
@@ -228,7 +207,6 @@ void scan_char() {
         val = *stream;
         ++stream;
     }
-
     if (*stream != '\'') {
         syntax_error("Expected closing char quote, got '%c'", *stream);
     } else {
@@ -248,6 +226,7 @@ void scan_str() {
     while (*stream && *stream != '"') {
         if (*stream == '\n') {
             syntax_error("String literal cannot contain newline");
+            break;
         } else if (*stream == '\\') {
             ++stream;
             char val = escape_to_char[*stream];
