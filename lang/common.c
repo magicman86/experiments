@@ -60,7 +60,10 @@ typedef struct BufHdr {
     char buf[0];
 } BufHdr;
 
+#define BUF(x) x
+
 #define buf__hdr(b) ((BufHdr *)((char *)(b) - (int)offsetof(BufHdr, buf)))
+
 #define buf__fits(b, n) ((buf_len(b) + (n)) <= buf_cap(b))
 #define buf__fit(b, n) (buf__fits(b, n) ? 0 : (b = buf__grow(b, buf_len(b) + (n), sizeof(*(b)))))
 

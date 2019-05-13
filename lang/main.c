@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <limits.h>
 #include <math.h>
+#include <inttypes.h>
 
 #include "common.c"
 #include "lex.c"
@@ -17,5 +18,6 @@
 int main(int argc, char **argv) {
     common_test();
     lex_test();
+    ast_test();
     return 0;
 }
